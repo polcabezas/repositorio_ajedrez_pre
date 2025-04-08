@@ -1,11 +1,6 @@
 ---
 description: 
 globs: 
-alwaysApply: false
----
----
-description:
-globs:
 alwaysApply: true
 ---
 # IMPORTANT RULES FOR YOU TO FOLLOW!!!
@@ -16,6 +11,7 @@ alwaysApply: true
 - Modular and well organized code
 - Examine all the existing code in order to add new functionallities properly
 - Add comments on every function defined to know what it does
+- ALL THE COMMENTS SHOULD BE WRITTEN IN SPANISH!!!
 - Make good comments, that are actually useful for later revising the code
 - When adding new code, always plan what are you wanting to do, and then move onto modifying it in the actual code
 - Before adding any single line of code think if it's worth it or not -> remember, keep it simple
@@ -30,45 +26,44 @@ alwaysApply: true
 #File Structure:
 repositorio_ajedrez_pre/
 │
-├── .env                # Environment variables (credentials, API keys)
-├── .env.example        # Example environment file
-├── .gitignore          # Specifies intentionally untracked files that Git should ignore
-├── main.py             # Main script to start the game, initializes MVC components
+├── .env                # Variables de entorno (credenciales, claves API)
+├── .env.example        # Archivo de ejemplo de entorno
+├── .gitignore          # Especifica archivos que Git debe ignorar intencionadamente
+├── main.py             # Script principal para iniciar el juego, inicializa componentes MVC
 │
-├── models/             # Contains the game's data and logic (The "brain")
+├── models/             # Contiene los datos y la lógica del juego (El "cerebro")
 │   ├── __init__.py
-│   ├── game_state.py   # Manages the overall game status
-│   ├── board.py        # Represents the chessboard and piece positions
-│   ├── piece.py        # Base class for pieces
-│   ├── pieces/         # Specific piece logic
+│   ├── juego.py        # Gestiona el estado general del juego
+│   ├── tablero.py      # Representa el tablero de ajedrez y las posiciones de las piezas
+│   ├── pieza.py        # Clase base para las piezas
+│   ├── piezas/         # Lógica específica de las piezas
 │   │   ├── __init__.py
-│   │   └── ...         # Individual piece classes (e.g., pawn.py, king.py)
-│   └── move_validator.py # Logic for validating moves
+│   │   └── ...         # Clases individuales de piezas (por ejemplo, peon.py, rey.py)
+│   └── validador_movimientos.py # Lógica para validar movimientos
 │
-├── views/              # Handles presentation and user interface (What the user sees)
+├── views/              # Maneja la presentación y la interfaz de usuario (Lo que ve el usuario)
 │   ├── __init__.py
-│   └── gui_view.py     # Draws the board, pieces, player info, etc.
-│   # Potentially assets/, ui_elements/ sub-folders later
+│   └── interfaz_ajedrez.py # Dibuja el tablero, las piezas, la información del jugador, etc.
+│   # Potencialmente subcarpetas assets/, ui_elements/ más adelante
 │
-├── controllers/        # Manages user input and communication between Model and View
+├── controllers/        # Gestiona la entrada del usuario y la comunicación entre Modelo y Vista
 │   ├── __init__.py
-│   └── game_controller.py # Processes input, updates Model, tells View to refresh
+│   └── controlador_juego.py # Procesa la entrada, actualiza el Modelo, indica a la Vista que se actualice
 │
-├── assets/             # Static files (e.g., images, requirement docs)
+├── assets/             # Archivos estáticos (por ejemplo, imágenes, documentos de requisitos)
 │   ├── __init__.py
-│   └── ...             # Image files (.png), Documents (.md, .pdf)
+│   └── ...             # Archivos de imagen (.png), Documentos (.md, .pdf)
 │
-├── chats/              # Stores conversation logs with the AI assistant
+├── chats/              # Almacena registros de conversaciones con el asistente AI
 │   ├── __init__.py
-│   └── ...             # Chat history files (.md)
+│   └── ...             # Archivos de historial de chat (.md)
 │
-├── .venv/              # Virtual environment files (usually excluded from git)
-├── .git/               # Git repository files (hidden)
-└── .cursor/            # Cursor configuration files (hidden)
-    └── rules/          # Rules for the AI assistant
+├── .venv/              # Archivos del entorno virtual (generalmente excluidos de git)
+├── .git/               # Archivos del repositorio Git (ocultos)
+└── .cursor/            # Archivos de configuración de Cursor (ocultos)
+    └── rules/          # Reglas para el asistente AI
         ├── main_rules.mdc
         └── chats_rules.mdc
-
 
 
 

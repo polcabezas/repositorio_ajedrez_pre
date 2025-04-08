@@ -1,3 +1,3 @@
 """
-Views package initializer.
+Inicializador del paquete de vistas.
 """ 

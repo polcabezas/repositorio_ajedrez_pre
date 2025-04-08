@@ -1,3 +1,3 @@
 """
-Models package initializer.
+Inicializador del paquete de modelos.
 """ 

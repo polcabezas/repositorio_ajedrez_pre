@@ -1,3 +1,3 @@
 """
-Specific piece logic package initializer.
+Inicializador del paquete para la lógica específica de las piezas.
 """ 

@@ -1,3 +1,3 @@
 """
-Main script to start the game, initializes MVC components.
+Script principal para iniciar el juego, inicializa los componentes MVC.
 """ 

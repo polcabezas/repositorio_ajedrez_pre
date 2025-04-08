@@ -1,3 +1,3 @@
 """
-Controllers package initializer.
+Inicializador del paquete de controladores.
 """ 
