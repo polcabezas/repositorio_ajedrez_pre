@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rules to follow every time you generate some code:
+- The chats folder is used like a historic of AI chats
+- Everytime I ask you something check if there is any file in the folder that contains info related to this new query
+- If there is a chat that already contains this info, update this file with the transcription of the new query + response
+- If there is not any chat that is already related to those same files or info, create a new one.
+- To create the files use this title format: "5 words max summary of the convo_last updated (in DD-MM-YYYY format)"
+- The chats need to be renamed every time they are updated. It can be because the new convo is not precisely similar to the title or just to add the new updated date
+- At the start of every chat file add the LLM model used and a summary of the convo using the format of this example:
+
+
+#Project Setup and Structure Conversation Log (08-04-2024)
+##Model used: Google Gemini 2.5 Pro Experimental
+---
+##Summary
+---
+This chat covers the initial setup of the chess project repository, including virtual environment activation, pip update, .gitignore configuration, and the creation of the basic Model-View-Controller (MVC) file structure based on the rules provided in @main_rules.mdc.
+
+##Key Steps Taken:
+---
+1. Virtual Environment Activation: Activated the .venv using .\.venv\Scripts\Activate.ps1.
+2. Pip Update: Updated pip to the latest version using python -m pip install --upgrade pip.
+3. .gitignore Configuration: Added standard Python ignore patterns (including .venv, __pycache__, build artifacts, IDE folders, testing cache) to the .gitignore file. Confirmed .env was already present.
+MVC Structure Creation:
+4. Created main directories: models/, views/, controllers/.
+    Created core files: main.py, models/__init__.py, models/game_state.py, models/board.py, models/piece.py, models/move_validator.py, views/__init__.py, views/gui_view.py, controllers/__init__.py, controllers/game_controller.py.
+    Added docstrings explaining the purpose of each created file.
+5. Piece File Creation: Created individual files for each chess piece (Pawn, Rook, Knight, Bishop, Queen, King) within models/pieces/, each with a basic docstring.
