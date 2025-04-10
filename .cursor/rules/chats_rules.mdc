@@ -6,9 +6,8 @@ alwaysApply: false
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Rules to follow every time you generate some code:
  ALL THE CHATS SUMMARY SHOULD BE WRITTEN IN SPANISH!!!
 - The chats folder is used like a historic of AI chats

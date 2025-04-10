@@ -14,7 +14,7 @@ from models.piezas.reina import Reina
 from models.piezas.rey import Rey
 from models.piezas.peon import Peon
 
-# Configure basic logging 
+# Configuración básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class Tablero:
         # Tablero 8x8 inicializado con None (casillas vacías)
         self.casillas: List[List[Optional[Pieza]]] = [[None for _ in range(8)] for _ in range(8)]
 
-        # Historial de movimientos (color, posOrigen, posDestino) - Puede necesitar enriquecerse para simulación perfecta
+        # Historial de movimientos (color, posOrigen, posDestino) - Podría necesitar enriquecerse para simulación perfecta
         self.historial_movimientos: List[Tuple[Literal['blanco', 'negro'], Tuple[int, int], Tuple[int, int]]] = []
 
         # Lista para almacenar las piezas capturadas
@@ -70,7 +70,7 @@ class Tablero:
         self.ultimo_movimiento: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
 
         # Historial de posiciones para la regla de triple repetición
-        # Clave: string de representación de posición (FEN-like), Valor: contador de ocurrencias
+        # Clave: string de representación de posición (tipo FEN), Valor: contador de ocurrencias
         self.historial_posiciones: Dict[str, int] = defaultdict(int)
 
         # Inicializar el tablero con piezas
@@ -83,15 +83,31 @@ class Tablero:
     def inicializarTablero(self):
         """
         Coloca las piezas en sus posiciones iniciales estándar.
-        Utiliza tuplas (fila, columna) para las posiciones al crear las piezas.
+        Pasa la instancia actual del tablero ('self') al constructor de cada pieza.
         """
-        # Blancas - Usando tuplas para las posiciones
-        self.casillas[0] = [Torre('blanco', (0, 0)), Caballo('blanco', (0, 1)), Alfil('blanco', (0, 2)), Reina('blanco', (0, 3)), Rey('blanco', (0, 4)), Alfil('blanco', (0, 5)), Caballo('blanco', (0, 6)), Torre('blanco', (0, 7))]
-        self.casillas[1] = [Peon('blanco', (1, 0)), Peon('blanco', (1, 1)), Peon('blanco', (1, 2)), Peon('blanco', (1, 3)), Peon('blanco', (1, 4)), Peon('blanco', (1, 5)), Peon('blanco', (1, 6)), Peon('blanco', (1, 7))]
+        # Blancas - Pasando 'self' (el tablero) al constructor de cada Pieza
+        self.casillas[0] = [
+            Torre('blanco', (0, 0), self), Caballo('blanco', (0, 1), self), Alfil('blanco', (0, 2), self),
+            Reina('blanco', (0, 3), self), Rey('blanco', (0, 4), self), Alfil('blanco', (0, 5), self),
+            Caballo('blanco', (0, 6), self), Torre('blanco', (0, 7), self)
+        ]
+        self.casillas[1] = [
+            Peon('blanco', (1, 0), self), Peon('blanco', (1, 1), self), Peon('blanco', (1, 2), self),
+            Peon('blanco', (1, 3), self), Peon('blanco', (1, 4), self), Peon('blanco', (1, 5), self),
+            Peon('blanco', (1, 6), self), Peon('blanco', (1, 7), self)
+        ]
 
-        # Negras - Usando tuplas para las posiciones
-        self.casillas[6] = [Peon('negro', (6, 0)), Peon('negro', (6, 1)), Peon('negro', (6, 2)), Peon('negro', (6, 3)), Peon('negro', (6, 4)), Peon('negro', (6, 5)), Peon('negro', (6, 6)), Peon('negro', (6, 7))]
-        self.casillas[7] = [Torre('negro', (7, 0)), Caballo('negro', (7, 1)), Alfil('negro', (7, 2)), Reina('negro', (7, 3)), Rey('negro', (7, 4)), Alfil('negro', (7, 5)), Caballo('negro', (7, 6)), Torre('negro', (7, 7))]
+        # Negras - Pasando 'self' (el tablero) al constructor de cada Pieza
+        self.casillas[6] = [
+            Peon('negro', (6, 0), self), Peon('negro', (6, 1), self), Peon('negro', (6, 2), self),
+            Peon('negro', (6, 3), self), Peon('negro', (6, 4), self), Peon('negro', (6, 5), self),
+            Peon('negro', (6, 6), self), Peon('negro', (6, 7), self)
+        ]
+        self.casillas[7] = [
+            Torre('negro', (7, 0), self), Caballo('negro', (7, 1), self), Alfil('negro', (7, 2), self),
+            Reina('negro', (7, 3), self), Rey('negro', (7, 4), self), Alfil('negro', (7, 5), self),
+            Caballo('negro', (7, 6), self), Torre('negro', (7, 7), self)
+        ]
 
     # ============================================================
     # 2. Consulta del Tablero y Validación Básica
@@ -224,6 +240,8 @@ class Tablero:
         # 5. Actualizar posición interna de la pieza
         if hasattr(pieza_movida, 'posicion'):
              pieza_movida.posicion = posDestino
+             if hasattr(pieza_movida, 'se_ha_movido'):
+                 pieza_movida.se_ha_movido = True
         else:
              logger.warning(f"La pieza {type(pieza_movida).__name__} movida a {posDestino} no tiene atributo 'posicion' para actualizar.")
 
@@ -234,7 +252,6 @@ class Tablero:
         self.actualizarPeonAlPaso(pieza_movida, posOrigen, posDestino)
         self.actualizarContadores(pieza_movida, es_captura)
         self.actualizarUltimoMovimiento(posOrigen, posDestino)
-        self.actualizarEstadoJuego() # Llama internamente a esMaterialInsuficiente y esTripleRepeticion
 
         # 7. Detectar promoción de peón
         es_promocion = False
@@ -252,6 +269,9 @@ class Tablero:
         estado_actual = self.obtenerPosicionActual()
         self.historial_posiciones[estado_actual] += 1
         logger.debug(f"Historial posiciones actualizado. Estado: '{estado_actual}', Count: {self.historial_posiciones[estado_actual]}")
+
+        # 10. Actualizar estado del juego AHORA, después del cambio de turno (NUEVO LUGAR)
+        self.actualizarEstadoJuego()
 
         # Retornar estado
         if es_promocion:
@@ -272,7 +292,7 @@ class Tablero:
         """
         if pieza is not None:
             self.piezasCapturadas.append(pieza)
-            logger.info(f"Pieza capturada: {type(pieza).__name__} {pieza.color}") # Log info
+            logger.info(f"Pieza capturada: {type(pieza).__name__} {pieza.color}") # Registrar info
             return True
         return False
 
@@ -332,10 +352,12 @@ class Tablero:
         # Actualizar posición interna de las piezas
         if hasattr(rey, 'posicion'): rey.posicion = rey_pos_destino
         if hasattr(torre, 'posicion'): torre.posicion = torre_pos_destino
+        if hasattr(rey, 'se_ha_movido'): rey.se_ha_movido = True
+        if hasattr(torre, 'se_ha_movido'): torre.se_ha_movido = True
         
         # Añadir al historial (puede requerir formato especial para PGN/FEN)
         # Por ahora, añadimos un registro simple indicando enroque
-        # O podríamos añadir los dos movimientos individuales? Mejor uno conceptual.
+        # ¿O podríamos añadir los dos movimientos individuales? Mejor uno conceptual.
         self.historial_movimientos.append((color, rey_pos_origen, rey_pos_destino)) # Registramos el mov del rey como representativo
         
         # Actualizar estado: derechos de enroque se pierden, contadores avanzan, etc.
@@ -369,7 +391,8 @@ class Tablero:
     def esCasillaAmenazada(self, posicion: Tuple[int, int], color_atacante: Literal['blanco', 'negro']) -> bool:
         """
         Verifica si una posición es amenazada por alguna pieza del color especificado.
-        Depende de `obtener_movimientos_potenciales` en las clases de Pieza.
+        Implementa la lógica de línea de visión y bloqueo para piezas deslizantes,
+        y movimientos específicos para peones, caballos y reyes.
         Es crucial para la detección de jaque.
 
         Args:
@@ -379,20 +402,98 @@ class Tablero:
         Returns:
             True si la posición es amenazada, False en caso contrario.
         """
+        target_f, target_c = posicion
         if not self.esPosicionValida(posicion):
             return False
 
-        for fila_idx, fila in enumerate(self.casillas):
-            for col_idx, pieza in enumerate(fila):
-                if pieza is not None and pieza.color == color_atacante:
-                    try:
-                        movimientos_potenciales = pieza.obtener_movimientos_potenciales(self)
-                        if posicion in movimientos_potenciales:
+        for r in range(8):
+            for c in range(8):
+                pieza = self.casillas[r][c]
+                if pieza is None or pieza.color != color_atacante:
+                    continue
+
+                attacker_f, attacker_c = pieza.posicion
+
+                # --- 1. Comprobación de Peón ---
+                if isinstance(pieza, Peon):
+                    direccion = 1 if pieza.color == 'blanco' else -1
+                    # El peón amenaza las casillas diagonales en frente
+                    if target_f == attacker_f + direccion:
+                        if target_c == attacker_c + 1 or target_c == attacker_c - 1:
                             return True
-                    except AttributeError:
-                         logger.warning(f"La pieza {type(pieza).__name__} no tiene 'obtener_movimientos_potenciales'. Amenaza desde {(fila_idx, col_idx)} no verificada.")
-                         continue
-     
+                    continue # Si es peón, no hace falta más chequeo
+
+                # --- 2. Comprobación de Caballo ---
+                if isinstance(pieza, Caballo):
+                    # El caballo amenaza si la diferencia absoluta de filas/cols es (1,2) o (2,1)
+                    df = abs(target_f - attacker_f)
+                    dc = abs(target_c - attacker_c)
+                    if (df == 1 and dc == 2) or (df == 2 and dc == 1):
+                        return True
+                    continue # Si es caballo, no hace falta más chequeo
+
+                # --- 3. Comprobación de Rey ---
+                if isinstance(pieza, Rey):
+                    # El rey amenaza las casillas adyacentes
+                    if abs(target_f - attacker_f) <= 1 and abs(target_c - attacker_c) <= 1:
+                        # No puede ser la misma casilla (abs(df) + abs(dc) > 0)
+                        if (target_f, target_c) != (attacker_f, attacker_c): 
+                           return True
+                    continue # Si es rey, no hace falta más chequeo
+
+                # --- 4. Comprobación de Piezas Deslizantes (Torre, Alfil, Reina) ---
+                is_sliding = isinstance(pieza, (Torre, Alfil, Reina))
+                if not is_sliding:
+                    continue # Si no es ninguna de las anteriores, algo raro pasa, pasar a la siguiente
+
+                # Verificar si la pieza puede atacar en línea recta o diagonal
+                can_attack_rank_file = isinstance(pieza, (Torre, Reina))
+                can_attack_diagonal = isinstance(pieza, (Alfil, Reina))
+
+                df = target_f - attacker_f
+                dc = target_c - attacker_c
+                on_line = False
+                step_f, step_c = 0, 0
+
+                # ¿Está en la misma fila o columna? (Ataque de Torre/Reina)
+                if can_attack_rank_file and (df == 0 or dc == 0) and (df != 0 or dc != 0):
+                    on_line = True
+                    step_f = 0 if df == 0 else (1 if df > 0 else -1)
+                    step_c = 0 if dc == 0 else (1 if dc > 0 else -1)
+                # ¿Está en la misma diagonal? (Ataque de Alfil/Reina)
+                elif can_attack_diagonal and abs(df) == abs(dc) and df != 0:
+                    on_line = True
+                    step_f = 1 if df > 0 else -1
+                    step_c = 1 if dc > 0 else -1
+                
+                # Si no está en una línea de ataque válida para esta pieza, continuar
+                if not on_line:
+                    continue
+                
+                # Ahora, verificar si el camino está libre HASTA la casilla objetivo
+                path_clear = True
+                check_f, check_c = attacker_f + step_f, attacker_c + step_c
+                while (check_f, check_c) != posicion:
+                    # Si salimos del tablero en el camino, algo es raro, pero el camino está 'libre' en ese sentido
+                    if not self.esPosicionValida((check_f, check_c)):
+                        # Esto no debería ocurrir si target_pos es válido y on_line es True
+                        logger.warning(f"[Threat Check Path] Path check went out of bounds from {(attacker_f, attacker_c)} to {posicion}")
+                        path_clear = False # Considerarlo bloqueado por seguridad
+                        break
+                    # Si encontramos CUALQUIER pieza en el camino, está bloqueado
+                    blocking_piece = self.getPieza((check_f, check_c))
+                    if blocking_piece is not None:
+                        path_clear = False
+                        break
+                    # Avanzar al siguiente paso
+                    check_f += step_f
+                    check_c += step_c
+                
+                # Si el camino estaba libre, la pieza amenaza la posición
+                if path_clear:
+                    return True
+
+        # Si ninguna pieza amenaza la posición tras revisar todas
         return False
 
     # ============================================================
@@ -521,7 +622,7 @@ class Tablero:
         Depende de `esCasillaAmenazada` y `esTripleRepeticion`.
         
         NOTA:
-         - Verifica jaque y tablas por 50 mov/repetición/material insuficiente (TODO).
+         - Verifica jaque y tablas por 50 mov/repetición/material insuficiente.
          - NO implementa chequeo completo de mate/ahogado, ya que requiere la 
            generación de TODOS los movimientos legales para el jugador actual, 
            lo cual es responsabilidad de una capa superior (Controlador/Validador).
@@ -539,11 +640,11 @@ class Tablero:
             if rey_pos: break
 
         if rey_pos is None:
-             logger.critical(f"No se encontró el rey {color_jugador_actual}. Estado del juego no actualizado.") # Use critical for severe errors
+             logger.critical(f"No se encontró el rey {color_jugador_actual}. Estado del juego no actualizado.") # Usar critical para errores graves
              return
 
         # 1. Comprobar condiciones de Tablas (que no dependen de movimientos legales)
-        if self.contadorRegla50Movimientos >= 100:
+        if self.contadorRegla50Movimientos >= 100: # Son 50 movimientos completos, 100 plies
             self.estado_juego = 'tablas'
             logger.info("Tablas por regla de 50 movimientos.")
             return
@@ -551,7 +652,7 @@ class Tablero:
             self.estado_juego = 'tablas'
             logger.info("Tablas por triple repetición.")
             return
-        # TODO: Añadir chequeo de material insuficiente para tablas
+        # Añadir chequeo de material insuficiente para tablas
         if self.esMaterialInsuficiente():
             self.estado_juego = 'tablas'
             logger.info("Tablas por material insuficiente.")
@@ -559,29 +660,22 @@ class Tablero:
 
         # 2. Comprobar Jaque (evaluando si el rey actual está amenazado)
         esta_en_jaque = self.esCasillaAmenazada(rey_pos, color_oponente)
-        
+
         # 3. Determinar estado final (Mate/Ahogado - REQUIERE MOVIMIENTOS LEGALES)
-        # La detección completa de Jaque Mate y Ahogado requiere generar TODOS los
-        # movimientos legales para el jugador actual. Si no hay movimientos legales,
-        # es Jaque Mate si el rey está en jaque, y Ahogado (tablas) si no lo está.
-        # Esta generación de movimientos legales suele residir en una clase
-        # ValidadorMovimientos o ControladorJuego para mantener la separación de
-        # responsabilidades.
-        # Ejemplo conceptual:
-        # movimientos_legales = GeneradorMovimientos.obtener_todos_movimientos_legales(self, color_jugador_actual)
-        # if not movimientos_legales:
-        #    if esta_en_jaque:
-        #        self.estado_juego = 'jaque_mate'
-        #        logger.info(f"Jaque Mate a {color_jugador_actual}.")
-        #    else:
-        #        self.estado_juego = 'tablas' # Ahogado
-        #        logger.info(f"Tablas por ahogado a {color_jugador_actual}.")
-        #    return
+        movimientos_legales = self.obtener_todos_movimientos_legales(color_jugador_actual)
+
+        if not movimientos_legales: # No hay movimientos legales
+           if esta_en_jaque:
+               self.estado_juego = 'jaque_mate'
+               logger.info(f"Jaque Mate a {color_jugador_actual}.")
+           else:
+               self.estado_juego = 'tablas' # Ahogado
+               logger.info(f"Tablas por ahogado a {color_jugador_actual}.")
+           return
 
         # 4. Si hay movimientos legales (o no hemos comprobado aún), actualizar estado básico
         if esta_en_jaque:
             self.estado_juego = 'jaque'
-            # logger.debug(f"Rey {color_jugador_actual} está en jaque.") # Puede ser muy verboso
         else:
             self.estado_juego = 'en_curso'
 
@@ -661,43 +755,137 @@ class Tablero:
 
         # NOTA: K+N+N vs K NO se considera insuficiente por las reglas FIDE, aunque
         # forzar mate es extremadamente difícil y raro. Esta función correctamente devuelve False.
-        # Otros casos más complejos (e.g., finales con peones bloqueados que no pueden avanzar)
+        # Otros casos más complejos (p.ej., finales con peones bloqueados que no pueden avanzar)
         # no se cubren aquí y generalmente se resuelven por la regla de 50 mov o triple repetición.
 
         return False
 
     # ==================================================================
-    # 6. Representación de Posición y Chequeo de Repetición (Auxiliares)
+    # 5.5 Simulación y Verificación de Seguridad del Rey (NUEVO)
     # ==================================================================
+
+    def _simular_y_verificar_seguridad(self, pieza: Pieza, destino: Tuple[int, int]) -> bool:
+        """
+        Simula un movimiento, verifica si el rey del jugador queda en jaque y deshace la simulación.
+        ¡Precaución! Este método modifica y restaura el estado del tablero temporalmente.
+
+        Args:
+            pieza: La pieza que se intenta mover.
+            destino: La casilla destino del movimiento simulado.
+
+        Returns:
+            True si el rey NO queda en jaque después del movimiento simulado, False en caso contrario.
+        """
+        origen = pieza.posicion
+        color_jugador = pieza.color
+        color_oponente = 'negro' if color_jugador == 'blanco' else 'blanco'
+
+        # --- Almacenar estado original ---        
+        pieza_capturada_temporal = self.getPieza(destino)
+        objetivo_ep_original = self.objetivoPeonAlPaso
+        derechos_enroque_original = { 
+            'blanco': self.derechosEnroque['blanco'].copy(),
+            'negro': self.derechosEnroque['negro'].copy()
+        }
+        pieza_se_ha_movido_original = pieza.se_ha_movido
+        torre_capturada_se_ha_movido_original = None
+        if pieza_capturada_temporal is not None and isinstance(pieza_capturada_temporal, Torre):
+             torre_capturada_se_ha_movido_original = pieza_capturada_temporal.se_ha_movido
+
+        # --- Simular el movimiento --- 
+        pieza_capturada_ep_real = None 
+        casilla_peon_capturado_ep = None
+        if isinstance(pieza, Peon) and destino == self.objetivoPeonAlPaso:
+            fila_captura_ep = origen[0]
+            col_captura_ep = destino[1]
+            casilla_peon_capturado_ep = (fila_captura_ep, col_captura_ep)
+            pieza_capturada_ep_real = self.getPieza(casilla_peon_capturado_ep)
+            if pieza_capturada_ep_real: # Solo si realmente hay algo que capturar al paso
+                self.setPieza(casilla_peon_capturado_ep, None) 
+        
+        self.setPieza(destino, pieza)
+        self.setPieza(origen, None)
+        pieza.posicion = destino 
+        if hasattr(pieza, 'se_ha_movido'): # Asegurar que la pieza tiene el atributo
+            pieza.se_ha_movido = True 
+        
+        # Actualizar derechos y EP temporalmente (simplificado)
+        self.actualizarDerechosEnroque(pieza, origen, pieza_capturada_temporal, destino)
+        self.actualizarPeonAlPaso(pieza, origen, destino)
+
+        # --- Verificar seguridad del rey --- 
+        rey_pos = None
+        for r, fila in enumerate(self.casillas):
+            for c, p_actual in enumerate(fila):
+                if isinstance(p_actual, Rey) and p_actual.color == color_jugador:
+                    rey_pos = (r, c)
+                    break
+            if rey_pos: break
+
+        es_seguro = False
+        if rey_pos is None:
+             logger.critical(f"SIMULACIÓN: Rey {color_jugador} no encontrado.")
+        else:
+             es_seguro = not self.esCasillaAmenazada(rey_pos, color_oponente)
+
+        # --- Deshacer la simulación ---
+        if hasattr(pieza, 'se_ha_movido'):
+            pieza.se_ha_movido = pieza_se_ha_movido_original 
+        pieza.posicion = origen 
+        self.setPieza(origen, pieza)
+        self.setPieza(destino, pieza_capturada_temporal)
+        if casilla_peon_capturado_ep and pieza_capturada_ep_real:
+            self.setPieza(casilla_peon_capturado_ep, pieza_capturada_ep_real) 
+
+        self.objetivoPeonAlPaso = objetivo_ep_original
+        self.derechosEnroque = derechos_enroque_original 
+        if pieza_capturada_temporal is not None and isinstance(pieza_capturada_temporal, Torre) and torre_capturada_se_ha_movido_original is not None:
+            pieza_capturada_temporal.se_ha_movido = torre_capturada_se_ha_movido_original
+
+        return es_seguro
+
+    # ============================================================ 
+    # 6. Representación de Posición y Chequeo de Repetición (Auxiliares)
+    # ============================================================
 
     def obtenerPosicionActual(self) -> str:
         """
         Obtiene una representación en texto única de la posición actual del tablero,
         derechos de enroque, turno y objetivo de peón al paso.
-        Necesario para el chequeo de triple repetición. Utiliza un formato similar a FEN.
+        Necesario para el chequeo de triple repetición. Utiliza un formato FEN estándar.
         NOTA: Depende de `obtenerNotacionFEN` en las clases de Pieza para la parte de piezas.
 
         Returns:
-            String representando unívocamente el estado relevante para repetición.
+            String representando unívocamente el estado relevante para repetición (Formato FEN).
         """
         posicion_piezas = []
-        for fila in self.casillas:
+        # Iterar desde la fila 8 (índice 7) hasta la 1 (índice 0) para FEN
+        for fila_idx in range(7, -1, -1):
             fila_str = ""
-            for pieza in fila:
+            empty_count = 0
+            for col_idx in range(8):
+                pieza = self.casillas[fila_idx][col_idx]
                 if pieza is None:
-                    fila_str += "." # Representa casilla vacía
+                    empty_count += 1
                 else:
-                    # Asume que Pieza tiene este método (necesita implementación)
+                    # Si había casillas vacías antes, añadir el número
+                    if empty_count > 0:
+                        fila_str += str(empty_count)
+                        empty_count = 0
+                    # Añadir la letra de la pieza
                     try:
-                         letra = pieza.obtenerNotacionFEN()
-                         fila_str += letra.upper() if pieza.color == 'blanco' else letra.lower()
+                        letra = pieza.obtenerNotacionFEN()
+                        fila_str += letra.upper() if pieza.color == 'blanco' else letra.lower()
                     except AttributeError:
-                         logger.warning(f"{type(pieza).__name__} no tiene 'obtenerNotacionFEN'. Usando '?'.")
-                         fila_str += "?"
+                        logger.warning(f"{type(pieza).__name__} no tiene 'obtenerNotacionFEN'. Usando '?'.")
+                        fila_str += "?"
+            # Si la fila termina con casillas vacías, añadir el número
+            if empty_count > 0:
+                fila_str += str(empty_count)
             posicion_piezas.append(fila_str)
         piezas_str = "/".join(posicion_piezas) # Separador de filas estilo FEN
         
-        # Añadir otros elementos del estado relevantes para la repetición:
+        # --- Resto del estado FEN (Turno, Enroque, Al Paso) ---
         # Turno
         turno_str = "w" if self.turno_blanco else "b"
         # Derechos de enroque
@@ -707,33 +895,20 @@ class Tablero:
         if self.derechosEnroque['negro']['corto']: enroque_str += "k"
         if self.derechosEnroque['negro']['largo']: enroque_str += "q"
         enroque_str = enroque_str if enroque_str else "-"
-        # Objetivo peón al paso (en notación algebraica e.g., e3)
+        # Objetivo peón al paso (en notación algebraica p.ej., e3)
         al_paso_str = "-"
         if self.objetivoPeonAlPaso:
             fila, col = self.objetivoPeonAlPaso
-            # Convertir (fila, col) a notación algebraica (e.g., (2, 4) -> e3)
-            # Columna: 0->a, 1->b, ..., 7->h
-            # Fila: 0->8, 1->7, ..., 7->1 (Invertido respecto a FEN estándar)
-            # Ajustamos a la convención del tablero (0-7), luego convertimos
-            # Columna 'a' + col_index, Fila '1' + (7 - fila_index)
+            # Convertir (fila, col) a notación algebraica (p.ej., (2, 4) -> e3)
             try:
-                 col_letra = chr(ord('a') + col)
-                 fila_num = str(8 - fila) # FEN usa 1-8, nuestro tablero 0-7
-                 # Corrección: FEN numera filas 1-8 desde abajo, nuestras tuplas 0-7 desde arriba.
-                 # Fila FEN = 8 - fila_tablero
-                 # E.g., peón blanco mueve e2->e4: (1,4)->(3,4). Objetivo al paso = (2,4)
-                 # (2,4) -> col='e', fila FEN = 8 - 2 = 6. -> e6 NO! Debe ser e3
-                 # Ajuste: fila FEN = fila_tablero + 1?
-                 # (1,4)->(3,4) => Objetivo=(2,4) => col='e', fila FEN = 2+1 = 3 => e3. CORRECTO.
-                 # Peón negro mueve d7->d5: (6,3)->(4,3). Objetivo al paso = (5,3)
-                 # (5,3) -> col='d', fila FEN = 5+1 = 6 => d6. CORRECTO.
-                 fila_num_fen = str(fila + 1) # Corregido
-                 al_paso_str = col_letra + fila_num_fen
-            except Exception as e: # Catch potential errors during conversion
-                 al_paso_str = "?" # Error en conversión
-                 logger.error(f"Error convirtiendo objetivo al paso {self.objetivoPeonAlPaso} a notación algebraica: {e}")
+                col_letra = chr(ord('a') + col)
+                fila_num_fen = str(fila + 1) # Fila FEN es 1-indexada
+                al_paso_str = col_letra + fila_num_fen
+            except Exception as e: 
+                al_paso_str = "?" # Error en conversión
+                logger.error(f"Error convirtiendo objetivo al paso {self.objetivoPeonAlPaso} a notación algebraica: {e}")
 
-        # Combinar todo en una cadena única (ignora contadores de 50-mov y ply)
+        # Combinar todo en una cadena única (ignora contadores de 50-mov y ply por defecto FEN)
         # Formato: piezas turno enroque al_paso
         return f"{piezas_str} {turno_str} {enroque_str} {al_paso_str}"
 
@@ -747,16 +922,47 @@ class Tablero:
         Returns:
             True si la posición actual se ha repetido tres (o más) veces, False en caso contrario.
         """
-        # Obtener la representación de la posición actual.
+        # Obtener la representación FEN estándar de la posición actual.
         posicion_actual_str = self.obtenerPosicionActual()
         
         # Consultar el conteo en el historial mantenido por el tablero.
         ocurrencias = self.historial_posiciones[posicion_actual_str]
         
-        logger.debug(f"Chequeando Repetición: Pos actual str: '{posicion_actual_str}'. Ocurrencias: {ocurrencias}")
+        logger.debug(f"Chequeando Repetición: Pos actual FEN: '{posicion_actual_str}'. Ocurrencias: {ocurrencias}")
         
         # La regla se cumple si la posición ha aparecido 3 o más veces.
         return ocurrencias >= 3
+
+    # ============================================================
+    # 6. Generación de Todos los Movimientos Legales (NUEVO)
+    # ============================================================
+
+    def obtener_todos_movimientos_legales(self, color: Literal['blanco', 'negro']) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """
+        Genera una lista de todos los movimientos legales para un color dado.
+        Un movimiento legal es uno que sigue las reglas de la pieza y no deja
+        al propio rey en jaque.
+
+        Args:
+            color: El color ('blanco' o 'negro') para el que generar movimientos.
+
+        Returns:
+            Una lista de tuplas, donde cada tupla representa un movimiento legal
+            en el formato ((fila_origen, col_origen), (fila_destino, col_destino)).
+            Devuelve una lista vacía si no hay movimientos legales (posible mate o ahogado).
+        """
+        todos_movimientos_legales = []
+        for r in range(8):
+            for c in range(8):
+                pieza = self.casillas[r][c]
+                if pieza is not None and pieza.color == color:
+                    movimientos_pieza = pieza.obtener_movimientos_legales() # Ya filtra por seguridad del rey
+                    origen = (r, c)
+                    for destino in movimientos_pieza:
+                        todos_movimientos_legales.append((origen, destino))
+        
+        # logger.debug(f"Movimientos legales generados para {color}: {len(todos_movimientos_legales)}") # Puede ser muy verboso
+        return todos_movimientos_legales
 
     # --- Fin Métodos ---
    
