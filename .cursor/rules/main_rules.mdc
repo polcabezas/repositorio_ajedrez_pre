@@ -27,6 +27,7 @@ alwaysApply: true
 - Keep just 1 class definition for every file you create. If you need to use more than 1 class to code the feature, create a dedicated file for each classs
 - If you delete a part of the code, don't keep the deleted part commented or even mention that deleted part.
 - Always take the credentials for any auth from the config.py file where every credential is retrieved from the .env file. Don't retrieve the credentials from the .env file every time.
+- When revising test errors you should always follow this order: Revise Test Working Properly -> Change Tests Code -> Revise Original Code Working Properly -> Change Original Code
 
 
 #File Structure:

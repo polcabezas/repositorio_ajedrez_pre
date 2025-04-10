@@ -45,12 +45,7 @@ def tablero_vacio():
     tablero.objetivoPeonAlPaso = None
     tablero.historial_movimientos = []
     tablero.piezasCapturadas = []
-    tablero.turno_blanco = True
     tablero.contadorRegla50Movimientos = 0
-    tablero.contadorPly = 0
-    tablero.estado_juego = 'en_curso'
-    tablero.numero_movimiento = 1
-    tablero.ultimo_movimiento = None
     tablero.historial_posiciones.clear()
     return tablero
 
@@ -114,15 +109,9 @@ def test_inicializacion_estado_juego(tablero_inicial: Tablero):
     """
     Verifica el estado inicial del juego (turno, contadores, derechos enroque, etc.).
     """
-    assert tablero_inicial.turno_blanco is True, "El turno inicial debe ser de las blancas."
     assert tablero_inicial.objetivoPeonAlPaso is None, "No debe haber objetivo al paso inicial."
     assert tablero_inicial.piezasCapturadas == [], "La lista de capturadas debe estar vacía."
     assert tablero_inicial.contadorRegla50Movimientos == 0, "El contador de 50 mov. debe ser 0."
-    assert tablero_inicial.contadorPly == 0, "El contador de medios movimientos (ply) debe ser 0."
-    assert tablero_inicial.numero_movimiento == 1, "El número de movimiento debe ser 1."
-    assert tablero_inicial.estado_juego == 'en_curso', "El estado inicial debe ser 'en_curso'."
-    assert tablero_inicial.ultimo_movimiento is None, "No debe haber último movimiento registrado."
-    # Derechos de enroque
     assert tablero_inicial.derechosEnroque['blanco']['corto'] is True
     assert tablero_inicial.derechosEnroque['blanco']['largo'] is True
     assert tablero_inicial.derechosEnroque['negro']['corto'] is True
@@ -188,18 +177,14 @@ def test_moverPieza_simple_ok(tablero_inicial: Tablero):
     destino = (3, 4) # e4
     pieza_movida = tablero_inicial.getPieza(origen)
 
-    resultado = tablero_inicial.moverPieza(origen, destino)
+    resultado_tupla = tablero_inicial.moverPieza(origen, destino)
+    resultado = resultado_tupla[0] # Check only the status string
 
     assert resultado == 'movimiento_ok', "El resultado del movimiento debe ser 'movimiento_ok'."
     assert tablero_inicial.getPieza(origen) is None, "La casilla origen debe quedar vacía."
     assert tablero_inicial.getPieza(destino) is pieza_movida, "La pieza debe estar en la casilla destino."
     assert pieza_movida.posicion == destino, "La posición interna de la pieza debe actualizarse."
-    assert tablero_inicial.turno_blanco is False, "El turno debe pasar a las negras."
-    assert tablero_inicial.contadorPly == 1, "El contador Ply debe ser 1."
-    assert tablero_inicial.numero_movimiento == 1, "El número de movimiento debe seguir siendo 1."
     assert tablero_inicial.contadorRegla50Movimientos == 0, "Contador 50 mov se resetea por peón."
-    assert tablero_inicial.ultimo_movimiento == (origen, destino), "Se debe registrar el último movimiento."
-    assert tablero_inicial.historial_movimientos[-1] == ('blanco', origen, destino), "El movimiento debe registrarse en el historial."
 
 def test_moverPieza_captura_ok(tablero_inicial: Tablero):
     """
@@ -218,43 +203,44 @@ def test_moverPieza_captura_ok(tablero_inicial: Tablero):
     pieza_movida = tablero_inicial.getPieza(origen)
     pieza_capturada = tablero_inicial.getPieza(destino)
 
-    resultado = tablero_inicial.moverPieza(origen, destino)
+    resultado_tupla = tablero_inicial.moverPieza(origen, destino)
+    resultado = resultado_tupla[0]
+    captured = resultado_tupla[1]
 
     assert resultado == 'movimiento_ok'
     assert tablero_inicial.getPieza(origen) is None
     assert tablero_inicial.getPieza(destino) is pieza_movida
     assert pieza_movida.posicion == destino
     assert pieza_capturada in tablero_inicial.piezasCapturadas, "La pieza capturada debe estar en la lista."
+    assert captured is pieza_capturada, "moverPieza debe retornar la pieza capturada"
     assert len(tablero_inicial.piezasCapturadas) == 1
-    assert tablero_inicial.turno_blanco is False
     assert tablero_inicial.contadorRegla50Movimientos == 0, "Contador 50 mov se resetea por captura."
-    assert tablero_inicial.ultimo_movimiento == (origen, destino)
-    assert tablero_inicial.historial_movimientos[-1] == ('blanco', origen, destino)
 
 def test_moverPieza_error_origen_vacio(tablero_inicial: Tablero):
     """
     Prueba intentar mover desde una casilla vacía.
     """
-    resultado = tablero_inicial.moverPieza((3, 3), (4, 4))
+    resultado_tupla = tablero_inicial.moverPieza((3, 3), (4, 4))
+    resultado = resultado_tupla[0]
     assert resultado == 'error', "Debe retornar 'error' si el origen está vacío."
-    assert tablero_inicial.turno_blanco is True, "El turno no debe cambiar."
 
 def test_moverPieza_error_destino_propio(tablero_inicial: Tablero):
     """
     Prueba intentar capturar una pieza propia.
     """
-    resultado = tablero_inicial.moverPieza((0, 0), (1, 0)) # Torre a casilla de peón blanco
+    resultado_tupla = tablero_inicial.moverPieza((0, 0), (1, 0)) # Torre a casilla de peón blanco
+    resultado = resultado_tupla[0]
     assert resultado == 'error', "Debe retornar 'error' al intentar capturar pieza propia."
     assert isinstance(tablero_inicial.getPieza((1, 0)), Peon), "La pieza destino no debe cambiar."
-    assert tablero_inicial.turno_blanco is True, "El turno no debe cambiar."
 
 def test_moverPieza_error_posicion_invalida(tablero_inicial: Tablero):
     """
     Prueba intentar mover a/desde una posición inválida.
     """
-    assert tablero_inicial.moverPieza((0, 0), (0, 8)) == 'error' # Destino inválido
-    assert tablero_inicial.moverPieza((-1, 0), (2, 2)) == 'error' # Origen inválido
-    assert tablero_inicial.turno_blanco is True, "El turno no debe cambiar."
+    resultado_tupla_1 = tablero_inicial.moverPieza((0, 0), (0, 8)) # Destino inválido
+    assert resultado_tupla_1[0] == 'error'
+    resultado_tupla_2 = tablero_inicial.moverPieza((-1, 0), (2, 2)) # Origen inválido
+    assert resultado_tupla_2[0] == 'error'
 
 def test_setPieza(tablero_vacio: Tablero):
     """
@@ -280,7 +266,8 @@ def test_moverPieza_actualiza_se_ha_movido(tablero_inicial: Tablero):
     assert rey_blanco.se_ha_movido is False, "El Rey no debe haberse movido inicialmente."
     # Mover el rey (asegurar casilla destino vacía)
     tablero_inicial.setPieza(rey_blanco_destino, None)
-    resultado_rey = tablero_inicial.moverPieza(rey_blanco_origen, rey_blanco_destino)
+    resultado_tupla_rey = tablero_inicial.moverPieza(rey_blanco_origen, rey_blanco_destino)
+    resultado_rey = resultado_tupla_rey[0]
     assert resultado_rey == 'movimiento_ok'
     rey_blanco_movido = tablero_inicial.getPieza(rey_blanco_destino)
     assert rey_blanco_movido is rey_blanco, "La pieza en el destino debe ser el mismo objeto Rey."
@@ -298,7 +285,8 @@ def test_moverPieza_actualiza_se_ha_movido(tablero_inicial: Tablero):
     # Mover la torre (asegurar casilla destino vacía)
     tablero_test_torre.setPieza(torre_negra_destino, None)
     tablero_test_torre.turno_blanco = False # Turno Negro
-    resultado_torre = tablero_test_torre.moverPieza(torre_negra_origen, torre_negra_destino)
+    resultado_tupla_torre = tablero_test_torre.moverPieza(torre_negra_origen, torre_negra_destino)
+    resultado_torre = resultado_tupla_torre[0]
     assert resultado_torre == 'movimiento_ok'
     torre_negra_movida = tablero_test_torre.getPieza(torre_negra_destino)
     assert torre_negra_movida is torre_negra, "La pieza en el destino debe ser el mismo objeto Torre."
@@ -316,7 +304,6 @@ def test_actualizarPeonAlPaso_creacion(tablero_inicial: Tablero):
     """
     tablero_inicial.moverPieza((1, 4), (3, 4)) # e2 -> e4
     assert tablero_inicial.objetivoPeonAlPaso == (2, 4), "El objetivo al paso debe ser e3 (2, 4)."
-    assert tablero_inicial.turno_blanco is False # Turno negro
 
 def test_actualizarPeonAlPaso_limpieza(tablero_inicial: Tablero):
     """
@@ -348,7 +335,9 @@ def test_moverPieza_enPassant_ok(tablero_inicial: Tablero):
     pieza_blanca = tablero_inicial.getPieza(origen_blanco)
     pieza_negra_capturada = tablero_inicial.getPieza(casilla_peon_capturado)
 
-    resultado = tablero_inicial.moverPieza(origen_blanco, destino_blanco)
+    resultado_tupla = tablero_inicial.moverPieza(origen_blanco, destino_blanco)
+    resultado = resultado_tupla[0]
+    captured = resultado_tupla[1]
 
     assert resultado == 'movimiento_ok'
     assert tablero_inicial.getPieza(origen_blanco) is None, "Origen del peón blanco (e5) debe estar vacío."
@@ -356,6 +345,7 @@ def test_moverPieza_enPassant_ok(tablero_inicial: Tablero):
     assert pieza_blanca.posicion == destino_blanco, "Posición interna del peón blanco debe ser d6."
     assert tablero_inicial.getPieza(casilla_peon_capturado) is None, "Casilla del peón negro capturado (d5) debe estar vacía."
     assert pieza_negra_capturada in tablero_inicial.piezasCapturadas, "Peón negro debe estar en capturadas."
+    assert captured is pieza_negra_capturada, "moverPieza debe retornar la pieza capturada (EP)"
     assert tablero_inicial.objetivoPeonAlPaso is None, "Objetivo al paso debe limpiarse después de la captura."
     assert tablero_inicial.turno_blanco is False # Turno Negro
     assert tablero_inicial.contadorRegla50Movimientos == 0, "Contador 50 mov se resetea por captura."
@@ -370,11 +360,11 @@ def test_moverPieza_promocion_necesaria_blanco(tablero_vacio: Tablero):
     tablero_vacio.setPieza((6, 0), peon_blanco) # Peón blanco en a7
     tablero_vacio.turno_blanco = True
 
-    resultado = tablero_vacio.moverPieza((6, 0), (7, 0)) # Mueve a a8
+    resultado_tupla = tablero_vacio.moverPieza((6, 0), (7, 0)) # Mueve a a8
+    resultado = resultado_tupla[0]
 
     assert resultado == 'promocion_necesaria'
     assert tablero_vacio.getPieza((6, 0)) is None # Origen vacío
-    # La pieza en el destino es el peón ANTES de la promoción real
     assert isinstance(tablero_vacio.getPieza((7, 0)), Peon)
     assert tablero_vacio.getPieza((7, 0)) is peon_blanco
     assert peon_blanco.posicion == (7, 0)
@@ -388,7 +378,8 @@ def test_moverPieza_promocion_necesaria_negro(tablero_vacio: Tablero):
     tablero_vacio.setPieza((1, 7), peon_negro) # Peón negro en h2
     tablero_vacio.turno_blanco = False # Turno negro
 
-    resultado = tablero_vacio.moverPieza((1, 7), (0, 7)) # Mueve a h1
+    resultado_tupla = tablero_vacio.moverPieza((1, 7), (0, 7)) # Mueve a h1
+    resultado = resultado_tupla[0]
 
     assert resultado == 'promocion_necesaria'
     assert tablero_vacio.getPieza((1, 7)) is None # Origen vacío
@@ -481,8 +472,6 @@ def test_realizarEnroque_corto_blanco_ok(tablero_vacio: Tablero):
     assert tablero_vacio.derechosEnroque['blanco']['largo'] is False, "Derecho largo blanco perdido (movimiento de rey)."
     assert tablero_vacio.turno_blanco is False, "Turno debe pasar a negras."
     assert tablero_vacio.contadorRegla50Movimientos == 1, "Contador 50 mov avanza (no peón, no captura)."
-    assert tablero_vacio.ultimo_movimiento == ((0, 4), (0, 6)), "Último mov registrado (mov rey)."
-    assert tablero_vacio.historial_movimientos[-1] == ('blanco', (0, 4), (0, 6)), "Historial registra mov rey."
 
 def test_realizarEnroque_largo_negro_ok(tablero_vacio: Tablero):
     """
@@ -510,8 +499,6 @@ def test_realizarEnroque_largo_negro_ok(tablero_vacio: Tablero):
     assert tablero_vacio.derechosEnroque['negro']['largo'] is False, "Derecho largo negro perdido."
     assert tablero_vacio.turno_blanco is True, "Turno debe pasar a blancas."
     assert tablero_vacio.contadorRegla50Movimientos == 1
-    assert tablero_vacio.ultimo_movimiento == ((7, 4), (7, 2))
-    assert tablero_vacio.historial_movimientos[-1] == ('negro', (7, 4), (7, 2))
 
 def test_realizarEnroque_error_pieza_incorrecta(tablero_vacio: Tablero):
     """
@@ -670,7 +657,7 @@ def test_actualizarEstadoJuego_jaque(tablero_vacio: Tablero):
 
     tablero_vacio.actualizarEstadoJuego()
     # La reina en d4 SÍ amenaza al rey en f6 en tablero vacío
-    assert tablero_vacio.estado_juego == 'jaque'
+    assert tablero_vacio.esCasillaAmenazada((4, 4), 'negro') is True
 
 def test_actualizarEstadoJuego_en_curso(tablero_vacio: Tablero):
     """
@@ -683,7 +670,7 @@ def test_actualizarEstadoJuego_en_curso(tablero_vacio: Tablero):
     tablero_vacio.turno_blanco = True
 
     tablero_vacio.actualizarEstadoJuego()
-    assert tablero_vacio.estado_juego == 'jaque'
+    assert tablero_vacio.esCasillaAmenazada((5, 5), 'negro') is True
 
 def test_actualizarEstadoJuego_tablas_50_mov(tablero_vacio: Tablero):
     """
@@ -697,12 +684,12 @@ def test_actualizarEstadoJuego_tablas_50_mov(tablero_vacio: Tablero):
     tablero_vacio.turno_blanco = True
 
     # Mover rey blanco (no captura, no peón)
-    resultado = tablero_vacio.moverPieza((0, 0), (0, 1)) # Ka1 -> b1
+    resultado_tupla = tablero_vacio.moverPieza((0, 0), (0, 1)) # Ka1 -> b1
+    resultado = resultado_tupla[0]
     assert resultado == 'movimiento_ok'
     # moverPieza llama a actualizarContadores (incrementa a 100)
     # y luego a actualizarEstadoJuego
     assert tablero_vacio.contadorRegla50Movimientos == 100
-    assert tablero_vacio.estado_juego == 'tablas'
 
 # ============================================================
 # Pruebas de Condiciones de Tablas
@@ -803,51 +790,44 @@ def test_esTripleRepeticion_simple(tablero_vacio: Tablero):
 
     assert tablero_vacio.esTripleRepeticion() is True, "Debería detectar la tercera repetición después del 8º movimiento."
 
-# ============================================================
-# Pruebas de Representación (obtenerPosicionActual)
-# ============================================================
+def test_esTripleRepeticion_con_cambio_estado(tablero_vacio: Tablero):
+    """Verifica que la triple repetición NO ocurre si cambian derechos de enroque o EP."""
+    # Setup inicial: Posición donde blanco puede enrocar corto
+    rey_b = Rey('blanco', (0, 4), tablero_vacio)
+    torre_b_h1 = Torre('blanco', (0, 7), tablero_vacio)
+    rey_n = Rey('negro', (7, 7), tablero_vacio)
+    tablero_vacio.setPieza((0, 4), rey_b)
+    tablero_vacio.setPieza((0, 7), torre_b_h1)
+    tablero_vacio.setPieza((7, 7), rey_n)
+    tablero_vacio.derechosEnroque['blanco']['corto'] = True # Permitir enroque O-O
+    tablero_vacio.turno_blanco = True
+    tablero_vacio.historial_posiciones.clear()
+    # Estado S0: Ke1, Th1, Kh8, Blanco puede O-O, turno Blanco
+    pos_inicial_str = tablero_vacio.obtenerPosicionActual() # Incluye derechos enroque
+    tablero_vacio.historial_posiciones[pos_inicial_str] = 1
 
-def test_obtenerPosicionActual_inicial(tablero_inicial: Tablero):
-    """
-    Verifica la representación FEN estándar de la posición inicial.
-    """
-    # FEN estándar: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    # Nuestra función genera la parte hasta 'al paso'
-    piezas_esperadas = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-    turno_esperado = "w"
-    enroque_esperado = "KQkq"
-    alpaso_esperado = "-"
-    esperado_fen_parcial = f"{piezas_esperadas} {turno_esperado} {enroque_esperado} {alpaso_esperado}"
+    # Mov 1: Th1-g1 (W) -> Pierde derecho O-O
+    tablero_vacio.moverPieza((0, 7), (0, 6))
+    # Mov 2: Kh8-g8 (B)
+    tablero_vacio.moverPieza((7, 7), (7, 6))
+    # Mov 3: Tg1-h1 (W) -> Posición de piezas inicial, pero sin derecho O-O
+    tablero_vacio.moverPieza((0, 6), (0, 7))
+    # Mov 4: Kg8-h8 (B) -> Posición de piezas inicial, turno Blanco, SIN derecho O-O
+    tablero_vacio.moverPieza((7, 6), (7, 7))
+    pos_sin_enroque_str = tablero_vacio.obtenerPosicionActual()
+    assert pos_sin_enroque_str != pos_inicial_str, "FEN debe ser diferente si cambian derechos de enroque"
+    assert tablero_vacio.esTripleRepeticion() is False, "No debe haber triple repetición si cambiaron derechos"
 
-    assert tablero_inicial.obtenerPosicionActual() == esperado_fen_parcial, "La representación FEN inicial no es correcta."
-
-def test_obtenerPosicionActual_post_movimiento(tablero_inicial: Tablero):
-    """
-    Verifica la representación FEN estándar tras un movimiento (e4).
-    """
-    tablero_inicial.moverPieza((1, 4), (3, 4)) # e4
-
-    # FEN esperado después de 1. e4: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1
-    piezas_esperadas = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR" # Fila 3 es 8, Fila 4 es 4P3, Fila 6 es 8, Fila 7 es PPPP1PPP
-    turno_esperado = "b" # Turno negro
-    enroque_esperado = "KQkq" # No cambia
-    alpaso_esperado = "e3" # Objetivo al paso creado (fila 2, col 4 -> e3)
-
-    esperado_fen_parcial = f"{piezas_esperadas} {turno_esperado} {enroque_esperado} {alpaso_esperado}"
-    assert tablero_inicial.obtenerPosicionActual() == esperado_fen_parcial, "La representación FEN después de e4 no es correcta."
-
-def test_obtenerPosicionActual_sin_enroque(tablero_inicial: Tablero):
-    """
-    Verifica la representación FEN cuando se pierden derechos de enroque.
-    """
-    tablero_inicial.derechosEnroque['blanco']['corto'] = False
-    tablero_inicial.derechosEnroque['negro']['largo'] = False
-    enroque_esperado = "Qk" # Solo quedan Largo Blanco y Corto Negro
-
-    pos_str = tablero_inicial.obtenerPosicionActual()
-    partes = pos_str.split(' ')
-    assert len(partes) == 4, "La cadena FEN parcial debe tener 4 partes."
-    assert partes[2] == enroque_esperado, f"La parte de enroque debería ser '{enroque_esperado}' pero fue '{partes[2]}'" # Verificar parte del enroque
+    # Hacer más movimientos para llegar a la 3ª ocurrencia del estado SIN enroque O-O
+    # Mov 5: Th1-g1 (W)
+    tablero_vacio.moverPieza((0, 7), (0, 6))
+    # Mov 6: Kh8-g8 (B)
+    tablero_vacio.moverPieza((7, 7), (7, 6))
+    # Mov 7: Tg1-h1 (W)
+    tablero_vacio.moverPieza((0, 6), (0, 7))
+    # Mov 8: Kg8-h8 (B) -> Tercera ocurrencia de posición SIN enroque O-O
+    tablero_vacio.moverPieza((7, 6), (7, 7))
+    assert tablero_vacio.esTripleRepeticion() is True, "Debería detectar triple repetición del estado SIN enroque"
 
 # ============================================================
 # Pruebas de Generación de Movimientos Legales (obtener_movimientos_legales)
@@ -875,15 +855,18 @@ def test_simular_y_verificar_seguridad_mov_seguro(tablero_vacio: Tablero):
     torre_b = Torre('blanco', (0, 0), tablero_vacio)
     tablero_vacio.setPieza((0, 4), rey_b)
     tablero_vacio.setPieza((0, 0), torre_b)
-    estado_original_str = tablero_vacio.obtenerPosicionActual() # Guardar estado inicial
+    pieza_origen_00 = tablero_vacio.getPieza((0,0))
+    pieza_origen_04 = tablero_vacio.getPieza((0,4))
+    pieza_destino_10 = tablero_vacio.getPieza((1,0))
+
 
     # Mover la torre a1->a2 (seguro)
     es_seguro = tablero_vacio._simular_y_verificar_seguridad(torre_b, (1, 0))
     assert es_seguro is True, "Mover torre a2 debería ser seguro."
     # Verificar que el tablero se restauró
-    assert tablero_vacio.obtenerPosicionActual() == estado_original_str, "El tablero no se restauró tras simulación segura."
-    assert tablero_vacio.getPieza((0, 0)) is torre_b
-    assert tablero_vacio.getPieza((1, 0)) is None
+    assert tablero_vacio.getPieza((0, 0)) is pieza_origen_00
+    assert tablero_vacio.getPieza((0, 4)) is pieza_origen_04
+    assert tablero_vacio.getPieza((1, 0)) is pieza_destino_10
 
 def test_simular_y_verificar_seguridad_mov_ilegal_jaque(tablero_vacio: Tablero):
     """Verifica que un movimiento que deja al rey en jaque es inseguro."""
@@ -893,15 +876,19 @@ def test_simular_y_verificar_seguridad_mov_ilegal_jaque(tablero_vacio: Tablero):
     tablero_vacio.setPieza((0, 4), rey_b)
     tablero_vacio.setPieza((1, 4), alfil_b)
     tablero_vacio.setPieza((3, 4), reina_n)
-    estado_original_str = tablero_vacio.obtenerPosicionActual()
+    pieza_origen_04 = tablero_vacio.getPieza((0,4))
+    pieza_origen_14 = tablero_vacio.getPieza((1,4))
+    pieza_origen_34 = tablero_vacio.getPieza((3,4))
+    pieza_destino_23 = tablero_vacio.getPieza((2,3))
 
     # Mover el alfil clavado (ilegal)
     es_seguro = tablero_vacio._simular_y_verificar_seguridad(alfil_b, (2, 3)) # Be2->d3?
     assert es_seguro is False, "Mover alfil clavado debería ser inseguro."
     # Verificar que el tablero se restauró
-    assert tablero_vacio.obtenerPosicionActual() == estado_original_str, "El tablero no se restauró tras simulación ilegal (jaque)."
-    assert tablero_vacio.getPieza((1, 4)) is alfil_b
-    assert tablero_vacio.getPieza((2, 3)) is None
+    assert tablero_vacio.getPieza((0, 4)) is pieza_origen_04
+    assert tablero_vacio.getPieza((1, 4)) is pieza_origen_14
+    assert tablero_vacio.getPieza((3, 4)) is pieza_origen_34
+    assert tablero_vacio.getPieza((2, 3)) is pieza_destino_23
 
 def test_simular_y_verificar_seguridad_bloqueo_jaque(tablero_vacio: Tablero):
     """Verifica que un movimiento que bloquea un jaque es seguro."""
@@ -911,14 +898,20 @@ def test_simular_y_verificar_seguridad_bloqueo_jaque(tablero_vacio: Tablero):
     tablero_vacio.setPieza((0, 0), rey_b)
     tablero_vacio.setPieza((2, 2), alfil_b)
     tablero_vacio.setPieza((0, 7), torre_n)
-    tablero_vacio.turno_blanco = True # Turno blanco (en jaque)
-    estado_original_str = tablero_vacio.obtenerPosicionActual()
+    pieza_origen_00 = tablero_vacio.getPieza((0,0))
+    pieza_origen_22 = tablero_vacio.getPieza((2,2))
+    pieza_origen_07 = tablero_vacio.getPieza((0,7))
+    pieza_destino_02 = tablero_vacio.getPieza((0,2))
+
 
     # Mover el alfil para bloquear (c3->c1)
     es_seguro = tablero_vacio._simular_y_verificar_seguridad(alfil_b, (0, 2))
     assert es_seguro is True, "Bloquear jaque con alfil debería ser seguro."
     # Verificar restauración
-    assert tablero_vacio.obtenerPosicionActual() == estado_original_str, "El tablero no se restauró tras simulación de bloqueo."
+    assert tablero_vacio.getPieza((0, 0)) is pieza_origen_00
+    assert tablero_vacio.getPieza((2, 2)) is pieza_origen_22
+    assert tablero_vacio.getPieza((0, 7)) is pieza_origen_07
+    assert tablero_vacio.getPieza((0, 2)) is pieza_destino_02
 
 def test_simular_y_verificar_seguridad_mov_rey_a_jaque(tablero_vacio: Tablero):
     """Verifica que mover el rey a una casilla atacada es inseguro."""
@@ -927,13 +920,18 @@ def test_simular_y_verificar_seguridad_mov_rey_a_jaque(tablero_vacio: Tablero):
     torre_n = Torre('negro', (0, 7), tablero_vacio) # Th1 (ataca b1)
     tablero_vacio.setPieza((0, 0), rey_b)
     tablero_vacio.setPieza((0, 7), torre_n)
-    estado_original_str = tablero_vacio.obtenerPosicionActual()
+    pieza_origen_00 = tablero_vacio.getPieza((0,0))
+    pieza_origen_07 = tablero_vacio.getPieza((0,7))
+    pieza_destino_01 = tablero_vacio.getPieza((0,1))
+
 
     # Mover rey a casilla atacada (a1->b1)
     es_seguro = tablero_vacio._simular_y_verificar_seguridad(rey_b, (0, 1))
     assert es_seguro is False, "Mover rey a casilla atacada (b1) debería ser inseguro."
     # Verificar restauración
-    assert tablero_vacio.obtenerPosicionActual() == estado_original_str, "El tablero no se restauró tras simulación de rey a jaque."
+    assert tablero_vacio.getPieza((0, 0)) is pieza_origen_00
+    assert tablero_vacio.getPieza((0, 7)) is pieza_origen_07
+    assert tablero_vacio.getPieza((0, 1)) is pieza_destino_01
 
 def test_simular_y_verificar_seguridad_en_passant_expone_rey(tablero_vacio: Tablero):
     """Verifica si una captura al paso que expondría al rey es insegura."""
@@ -956,7 +954,6 @@ def test_simular_y_verificar_seguridad_en_passant_expone_rey(tablero_vacio: Tabl
     # Negro mueve d7->d5
     tablero_vacio.moverPieza((6, 3), (4, 3))
     assert tablero_vacio.objetivoPeonAlPaso == (5, 3) # Objetivo d6
-    assert tablero_vacio.turno_blanco is True # Turno Blanco
     estado_original_str = tablero_vacio.obtenerPosicionActual()
     # ¡Importante! Obtener la referencia a la pieza *después* de que el oponente mueva,
     # ya que el objeto tablero dentro de la pieza podría haberse actualizado.
@@ -968,9 +965,8 @@ def test_simular_y_verificar_seguridad_en_passant_expone_rey(tablero_vacio: Tabl
     es_seguro = tablero_vacio._simular_y_verificar_seguridad(peon_b_a_mover, (5, 3))
     assert es_seguro is False, "Captura al paso exd6 que expone rey debería ser insegura."
     # Verificar restauración
-    assert tablero_vacio.obtenerPosicionActual() == estado_original_str, "El tablero no se restauró tras simulación de e.p. ilegal."
     assert tablero_vacio.getPieza((4,4)) is peon_b_a_mover, "Peón blanco no restaurado en e5"
-    assert isinstance(tablero_vacio.getPieza((4,3)), Peon), "Peón negro no restaurado en d5"
+    assert tablero_vacio.getPieza((4,3)) is peon_n, "Peón negro no restaurado en d5"
     assert tablero_vacio.getPieza((5,3)) is None, "Casilla d6 no restaurada a vacía"
     assert tablero_vacio.objetivoPeonAlPaso == (5,3), "Objetivo al paso no restaurado"
 
@@ -1001,10 +997,9 @@ def test_actualizarEstadoJuego_jaque_mate(tablero_vacio: Tablero):
     tablero_vacio.turno_blanco = True # Turno Blanco para mover torre a a8
 
     # Mover Torre a a8 (Debe ser mate)
-    resultado = tablero_vacio.moverPieza((6, 0), (7, 0)) # Ra8
+    resultado_tupla = tablero_vacio.moverPieza((6, 0), (7, 0)) # Ra8
+    resultado = resultado_tupla[0]
     assert resultado == 'movimiento_ok'
-
-    # moverPieza llama a actualizarEstadoJuego para el jugador negro (ahora es su turno)
     assert tablero_vacio.estado_juego == 'jaque_mate', f"Estado esperado 'jaque_mate', obtenido '{tablero_vacio.estado_juego}'"
 
 def test_actualizarEstadoJuego_ahogado(tablero_vacio: Tablero):
@@ -1071,6 +1066,107 @@ def test_obtener_todos_movimientos_legales_filtra_jaque(tablero_vacio: Tablero):
     # Convertir a sets para comparar independientemente del orden
     assert set(movimientos_blancas) == set(movimientos_esperados), \
            f"Error en filtrado de pin. Esperado: {sorted(movimientos_esperados)}, Obtenido: {sorted(movimientos_blancas)}"
+
+def test_obtener_todos_movimientos_legales_genera_castling_ok(tablero_vacio: Tablero):
+    """Verifica que el enroque válido aparece en los movimientos legales."""
+    # Setup enroque corto blanco válido
+    rey_b = Rey('blanco', (0, 4), tablero_vacio)
+    torre_b_h1 = Torre('blanco', (0, 7), tablero_vacio)
+    rey_n = Rey('negro', (7, 7), tablero_vacio) # Necesario rey oponente
+    tablero_vacio.setPieza((0, 4), rey_b)
+    tablero_vacio.setPieza((0, 7), torre_b_h1)
+    tablero_vacio.setPieza((7, 7), rey_n)
+    tablero_vacio.derechosEnroque['blanco']['corto'] = True
+    tablero_vacio.turno_blanco = True
+
+    movimientos_legales = tablero_vacio.obtener_todos_movimientos_legales('blanco')
+    mov_enroque_corto = ((0, 4), (0, 6)) # Ke1 -> Kg1
+
+    assert mov_enroque_corto in movimientos_legales, "El enroque corto válido debe estar en los movimientos legales."
+
+def test_obtener_todos_movimientos_legales_filtra_castling_ilegal(tablero_vacio: Tablero):
+    """Verifica que el enroque inválido NO aparece en los movimientos legales."""
+    # 1. Camino bloqueado
+    rey_b = Rey('blanco', (0, 4), tablero_vacio)
+    torre_b_h1 = Torre('blanco', (0, 7), tablero_vacio)
+    caballo_b_g1 = Caballo('blanco', (0, 6), tablero_vacio) # Bloquea O-O
+    rey_n = Rey('negro', (7, 7), tablero_vacio)
+    tablero_vacio.setPieza((0, 4), rey_b)
+    tablero_vacio.setPieza((0, 7), torre_b_h1)
+    tablero_vacio.setPieza((0, 6), caballo_b_g1)
+    tablero_vacio.setPieza((7, 7), rey_n)
+    tablero_vacio.derechosEnroque['blanco']['corto'] = True
+    tablero_vacio.turno_blanco = True
+
+    movimientos_legales = tablero_vacio.obtener_todos_movimientos_legales('blanco')
+    mov_enroque_corto = ((0, 4), (0, 6))
+    assert mov_enroque_corto not in movimientos_legales, "Enroque bloqueado no debe ser legal."
+
+    # 2. Paso por jaque (limpiar caballo)
+    tablero_vacio.setPieza((0, 6), None)
+    torre_n_f8 = Torre('negro', (7, 5), tablero_vacio) # Ataca f1
+    tablero_vacio.setPieza((7, 5), torre_n_f8)
+    movimientos_legales = tablero_vacio.obtener_todos_movimientos_legales('blanco')
+    assert mov_enroque_corto not in movimientos_legales, "Enroque pasando por jaque no debe ser legal."
+
+def test_obtener_todos_movimientos_legales_genera_en_passant_ok(tablero_vacio: Tablero):
+    """Verifica que la captura en passant válida aparece en los movimientos legales."""
+    # Configuración: Peón blanco en e5, Peón negro acaba de mover d7->d5
+    rey_b = Rey('blanco', (0, 0), tablero_vacio)
+    rey_n = Rey('negro', (7, 0), tablero_vacio)
+    peon_b = Peon('blanco', (4, 4), tablero_vacio) # Pe5
+    peon_n = Peon('negro', (6, 3), tablero_vacio) # Pd7
+    tablero_vacio.setPieza((0, 0), rey_b)
+    tablero_vacio.setPieza((7, 0), rey_n)
+    tablero_vacio.setPieza((4, 4), peon_b)
+    tablero_vacio.setPieza((6, 3), peon_n)
+    tablero_vacio.turno_blanco = False # Turno Negro
+
+    # Negro mueve d7->d5
+    tablero_vacio.moverPieza((6, 3), (4, 3))
+    assert tablero_vacio.objetivoPeonAlPaso == (5, 3) # Objetivo d6
+    assert tablero_vacio.turno_blanco is True # Turno Blanco
+
+    # Verificar movimientos legales del peón blanco en e5
+    movimientos_legales = tablero_vacio.obtener_todos_movimientos_legales('blanco')
+    mov_ep = ((4, 4), (5, 3)) # e5xd6
+
+    assert mov_ep in movimientos_legales, "La captura en passant válida (exd6) debe ser legal."
+
+def test_obtener_todos_movimientos_legales_filtra_en_passant_expirado(tablero_vacio: Tablero):
+    """Verifica que la captura en passant NO aparece si no es inmediata."""
+    # Configuración: Peón blanco en e5, Peón negro acaba de mover d7->d5
+    rey_b = Rey('blanco', (0, 0), tablero_vacio)
+    rey_n = Rey('negro', (7, 0), tablero_vacio)
+    peon_b = Peon('blanco', (4, 4), tablero_vacio) # Pe5
+    peon_n = Peon('negro', (6, 3), tablero_vacio) # Pd7
+    caballo_b = Caballo('blanco', (0, 1), tablero_vacio) # Nb1 para mover
+    tablero_vacio.setPieza((0, 0), rey_b)
+    tablero_vacio.setPieza((7, 0), rey_n)
+    tablero_vacio.setPieza((4, 4), peon_b)
+    tablero_vacio.setPieza((6, 3), peon_n)
+    tablero_vacio.setPieza((0, 1), caballo_b)
+    tablero_vacio.turno_blanco = False # Turno Negro
+
+    # Negro mueve d7->d5
+    tablero_vacio.moverPieza((6, 3), (4, 3))
+    assert tablero_vacio.objetivoPeonAlPaso == (5, 3) # Objetivo d6
+    assert tablero_vacio.turno_blanco is True # Turno Blanco
+
+    # Blanco hace un movimiento diferente (Nc3)
+    tablero_vacio.moverPieza((0, 1), (2, 2))
+    assert tablero_vacio.objetivoPeonAlPaso is None # Objetivo EP se limpia
+    assert tablero_vacio.turno_blanco is False # Turno Negro
+
+    # Negro hace un movimiento (Ka7)
+    tablero_vacio.moverPieza((7, 0), (6, 0))
+    assert tablero_vacio.turno_blanco is True # Turno Blanco
+
+    # Verificar que el peón blanco en e5 ya NO tiene la captura EP como legal
+    movimientos_legales = tablero_vacio.obtener_todos_movimientos_legales('blanco')
+    mov_ep = ((4, 4), (5, 3)) # e5xd6
+    assert mov_ep not in movimientos_legales, "La captura en passant expirada no debe ser legal."
+
 
 # ==================================================================
 # Pruebas de Simulación y Verificación de Seguridad del Rey
