@@ -466,20 +466,24 @@ class Juego:
             logger.info("Tablas por material insuficiente.")
             return
 
-        # 2. Comprobar Jaque al rey del jugador actual
-        rey_pos = self._encontrarRey(color_jugador_actual)
-        if rey_pos is None:
-             logger.critical(f"No se encontró el rey {color_jugador_actual}. Estado del juego no puede ser evaluado.")
+        # 2. Comprobar Jaque al rey del jugador actual Y del oponente
+        rey_pos_actual = self._encontrarRey(color_jugador_actual)
+        rey_pos_oponente = self._encontrarRey(color_oponente)
+        
+        if rey_pos_actual is None or rey_pos_oponente is None:
+             logger.critical(f"No se encontró alguno de los reyes. Estado del juego no puede ser evaluado.")
              # Quizás marcar un estado de error?
              return
 
-        esta_en_jaque = self.tablero.esCasillaAmenazada(rey_pos, color_oponente)
+        # Verificar si algún rey está en jaque
+        esta_en_jaque_actual = self.tablero.esCasillaAmenazada(rey_pos_actual, color_oponente)
+        esta_en_jaque_oponente = self.tablero.esCasillaAmenazada(rey_pos_oponente, color_jugador_actual)
 
         # 3. Comprobar Mate o Ahogado (si no hay movimientos legales)
         movimientos_legales = self.tablero.obtener_todos_movimientos_legales(color_jugador_actual)
 
         if not movimientos_legales:
-            if esta_en_jaque:
+            if esta_en_jaque_actual:
                 self.estado_juego = 'jaque_mate'
                 logger.info(f"Jaque Mate a {color_jugador_actual}.")
             else:
@@ -488,9 +492,12 @@ class Juego:
             return # El juego termina
 
         # 4. Si hay movimientos legales
-        if esta_en_jaque:
+        if esta_en_jaque_actual or esta_en_jaque_oponente:
             self.estado_juego = 'jaque'
-            logger.info(f"Jaque a {color_jugador_actual}.")
+            if esta_en_jaque_actual:
+                logger.info(f"Jaque a {color_jugador_actual}.")
+            else:
+                logger.info(f"Jaque a {color_oponente}.")
         else:
             self.estado_juego = 'en_curso'
             logger.debug(f"Juego en curso. Turno de {color_jugador_actual}.")
@@ -539,15 +546,12 @@ class Juego:
         
     def estaEnJaque(self, color: Literal['blanco', 'negro']) -> bool:
         """ Comprueba si el rey del color especificado está actualmente en jaque. """
-        if color == self.turno_actual:
-            # Si es el turno de este color, el estado ya lo refleja
-            return self.estado_juego == 'jaque' or self.estado_juego == 'jaque_mate'
-        else:
-            # Si NO es el turno de este color, necesitamos comprobarlo explícitamente
-            rey_pos = self._encontrarRey(color)
-            if not rey_pos: return False # No hay rey?
-            color_oponente = 'negro' if color == 'blanco' else 'blanco'
-            return self.tablero.esCasillaAmenazada(rey_pos, color_oponente)
+        # Método directo: siempre verificar si la casilla del rey está amenazada
+        rey_pos = self._encontrarRey(color)
+        if not rey_pos: 
+            return False # No hay rey?
+        color_oponente = 'negro' if color == 'blanco' else 'blanco'
+        return self.tablero.esCasillaAmenazada(rey_pos, color_oponente)
 
     # TODO: Implementar el resto de métodos de consulta y generación (FEN, PGN, etc.)
     # def estaEnJaqueMate(self, color: Literal['blanco', 'negro']) -> bool: ...

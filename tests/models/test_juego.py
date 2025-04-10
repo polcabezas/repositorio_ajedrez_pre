@@ -253,6 +253,8 @@ def test_enroque_ilegal_rey_movido(juego_nuevo):
     # Quitar piezas intermedias
     juego_nuevo.tablero.setPieza((0, 5), None) 
     juego_nuevo.tablero.setPieza((0, 6), None)
+    # *** Añadido: Quitar peón en e2 para permitir Ke1-e2 ***
+    juego_nuevo.tablero.setPieza((1, 4), None) # Peón e2
     
     # Mover rey blanco y volver
     assert juego_nuevo.realizarMovimiento((0, 4), (1, 4)) == True # Ke1-e2
@@ -275,6 +277,8 @@ def test_enroque_ilegal_torre_movida(juego_nuevo):
     # Quitar piezas intermedias
     juego_nuevo.tablero.setPieza((0, 5), None) 
     juego_nuevo.tablero.setPieza((0, 6), None)
+    # *** Añadido: Quitar peón en h2 para permitir Th1-h2 ***
+    juego_nuevo.tablero.setPieza((1, 7), None) # Peón h2
     
     # Mover torre corta blanca y volver
     assert juego_nuevo.realizarMovimiento((0, 7), (1, 7)) == True # Th1-h2
@@ -309,15 +313,42 @@ def test_enroque_ilegal_jaque_actual(juego_nuevo):
     # Quitar piezas intermedias blancas para enroque corto
     juego_nuevo.tablero.setPieza((0, 5), None) 
     juego_nuevo.tablero.setPieza((0, 6), None)
+    # Quitar peón en e2 que bloquea el jaque
+    juego_nuevo.tablero.setPieza((1, 4), None)
+    
+    # Debug: verificar si la torre negra en e5 realmente amenaza al rey blanco en e1
+    rey_blanco_pos = (0, 4)  # e1
+    torre_negra_pos = (4, 4)  # e5
+    torre_negra = juego_nuevo.tablero.getPieza(torre_negra_pos)
+    
+    print(f"Torre negra en {torre_negra_pos}: {torre_negra}")
+    print(f"Rey blanco en {rey_blanco_pos}: {juego_nuevo.tablero.getPieza(rey_blanco_pos)}")
+    
+    # Verificar si hay alguna pieza bloqueando el camino entre la torre y el rey
+    bloqueo = False
+    for fila in range(1, 4):  # Comprobar casillas e2, e3, e4
+        pieza_intermedia = juego_nuevo.tablero.getPieza((fila, 4))
+        if pieza_intermedia:
+            bloqueo = True
+            print(f"Pieza bloqueando en {(fila, 4)}: {pieza_intermedia}")
+    
+    print(f"¿Camino bloqueado entre torre y rey?: {bloqueo}")
+    print(f"¿Rey en jaque según el método?: {juego_nuevo.estaEnJaque('blanco')}")
+    print(f"¿Casilla amenazada directamente?: {juego_nuevo.tablero.esCasillaAmenazada(rey_blanco_pos, 'negro')}")
     
     # Actualizar estado del juego (debería detectar jaque)
     juego_nuevo._actualizarEstadoJuego() # Forzar actualización manual, normalmente se hace tras mover
+    print(f"Estado del juego después de actualizar: {juego_nuevo.estado_juego}")
+    
     assert juego_nuevo.estado_juego == 'jaque' 
     assert juego_nuevo.estaEnJaque('blanco') == True
 
     # Intentar enrocar (no debería estar en legales)
     movs_legales = juego_nuevo.tablero.obtener_todos_movimientos_legales('blanco')
     enroque_corto_mov = ((0, 4), (0, 6))
+    print(f"Movimientos legales para blanco: {movs_legales}")
+    print(f"¿Enroque corto entre movimientos legales?: {enroque_corto_mov in movs_legales}")
+    
     assert enroque_corto_mov not in movs_legales
     assert juego_nuevo.realizarMovimiento((0, 4), (0, 6)) == False
 
@@ -328,10 +359,33 @@ def test_enroque_ilegal_paso_por_jaque(juego_nuevo):
     # Quitar piezas intermedias blancas para enroque corto
     juego_nuevo.tablero.setPieza((0, 5), None) 
     juego_nuevo.tablero.setPieza((0, 6), None)
+    # Quitar peón en f2 que bloquea el ataque a f1
+    juego_nuevo.tablero.setPieza((1, 5), None)
+    
+    # Debug: verificar si la torre negra en f5 realmente amenaza la casilla f1
+    casilla_f1 = (0, 5)  # f1
+    torre_negra_pos = (4, 5)  # f5
+    torre_negra = juego_nuevo.tablero.getPieza(torre_negra_pos)
+    
+    print(f"Torre negra en {torre_negra_pos}: {torre_negra}")
+    
+    # Verificar si hay alguna pieza bloqueando el camino entre la torre y f1
+    bloqueo = False
+    for fila in range(1, 4):  # Comprobar casillas f2, f3, f4
+        pieza_intermedia = juego_nuevo.tablero.getPieza((fila, 5))
+        if pieza_intermedia:
+            bloqueo = True
+            print(f"Pieza bloqueando en {(fila, 5)}: {pieza_intermedia}")
+    
+    print(f"¿Camino bloqueado entre torre y f1?: {bloqueo}")
+    print(f"¿Casilla f1 amenazada directamente?: {juego_nuevo.tablero.esCasillaAmenazada(casilla_f1, 'negro')}")
 
     # Intentar enrocar (no debería estar en legales)
     movs_legales = juego_nuevo.tablero.obtener_todos_movimientos_legales('blanco')
     enroque_corto_mov = ((0, 4), (0, 6))
+    print(f"Movimientos legales para blanco: {movs_legales}")
+    print(f"¿Enroque corto entre movimientos legales?: {enroque_corto_mov in movs_legales}")
+    
     assert enroque_corto_mov not in movs_legales
     assert juego_nuevo.realizarMovimiento((0, 4), (0, 6)) == False
 
@@ -344,10 +398,36 @@ def test_jaque(juego_nuevo):
     """Verifica la detección de jaque."""
     # Poner Dama blanca dando jaque al rey negro
     juego_nuevo.tablero.setPieza((3, 4), Reina('blanco', (3, 4), juego_nuevo.tablero)) # Dama en e4
+    # Quitar peones que bloquean el jaque
+    juego_nuevo.tablero.setPieza((6, 4), None) # Quitar peón negro en e7
+    
+    # Debug: verificar si la reina blanca en e4 realmente amenaza al rey negro en e8
+    rey_negro_pos = (7, 4)  # e8
+    reina_blanca_pos = (3, 4)  # e4
+    reina_blanca = juego_nuevo.tablero.getPieza(reina_blanca_pos)
+    
+    print(f"Reina blanca en {reina_blanca_pos}: {reina_blanca}")
+    print(f"Rey negro en {rey_negro_pos}: {juego_nuevo.tablero.getPieza(rey_negro_pos)}")
+    
+    # Verificar si hay alguna pieza bloqueando el camino entre la reina y el rey
+    bloqueo = False
+    for fila in range(4, 7):  # Comprobar casillas e5, e6, e7
+        pieza_intermedia = juego_nuevo.tablero.getPieza((fila, 4))
+        if pieza_intermedia:
+            bloqueo = True
+            print(f"Pieza bloqueando en {(fila, 4)}: {pieza_intermedia}")
+    
+    print(f"¿Camino bloqueado entre reina y rey?: {bloqueo}")
+    print(f"¿Rey en jaque según el método?: {juego_nuevo.estaEnJaque('negro')}")
+    print(f"¿Casilla amenazada directamente?: {juego_nuevo.tablero.esCasillaAmenazada(rey_negro_pos, 'blanco')}")
+    
     # Mover un peón blanco para que sea turno de negras
     juego_nuevo.realizarMovimiento((1, 0), (2, 0)) # a2-a3
     
     # Verificar estado
+    print(f"Estado del juego después de mover: {juego_nuevo.estado_juego}")
+    print(f"¿Rey en jaque después de mover?: {juego_nuevo.estaEnJaque('negro')}")
+    
     assert juego_nuevo.estado_juego == 'jaque'
     assert juego_nuevo.estaEnJaque('negro') == True
     assert juego_nuevo.estaEnJaque('blanco') == False

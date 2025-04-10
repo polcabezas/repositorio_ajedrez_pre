@@ -93,3 +93,12 @@ class Alfil(Pieza):
     # No es necesario sobreescribir obtener_movimientos_legales por ahora,
     # ya que el Alfil no tiene movimientos especiales.
     # La implementación base en Pieza se encarga del filtrado básico. 
+
+
+if __name__ == "__main__":
+    print("Test de Alfil")
+    # Crear un tablero de prueba
+    tablero = Tablero()
+    # Crear un alfil blanco en la posición e4
+
+
